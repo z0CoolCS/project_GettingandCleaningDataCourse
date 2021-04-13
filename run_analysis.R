@@ -3,8 +3,8 @@
 #################################################################
 ### LOADING LIBS
 install.packages("dplyr")
+
 library(dplyr)
-library(stringr) # for str_detect function
 
 ### BUILDING FOLDER ARCHITECTURE
 if (!dir.exists("backup")) {
@@ -19,7 +19,12 @@ url <- "https://d396qusza40orc.cloudfront.net/getdata%2Fprojectfiles%2FUCI%20HAR
 download.file(url, destfile = "./backup/dataset.zip", method = "curl")
 unzip("./backup/dataset.zip")
 if (dir.exists("UCI HAR Dataset")) {
-  file.rename(from = "UCI HAR Dataset", to = "data") # Rename the folder's name
+  if (dir.exists("data")) {
+    print("Data folder already exists")
+  } else {
+    file.rename(from = "./UCI HAR Dataset/", to = "./data/") # Rename the folder's name
+  }
+  
 }
 
 
@@ -78,8 +83,13 @@ pathTrainBodyGyroZ <- paste(pathInertialTrain, "body_gyro_z_train.txt", sep = ""
 df_activity <- read.table(pathActivity, header = FALSE)
 colnames(df_activity) <- c("id", "activity")
 df_features <- read.table(pathFeatures, header = FALSE)
-df_features[,2] <- tolower(df_features[,2])
-df_features[,2] <- gsub("[\\(\\)-]", "", df_features[,2])
+
+### Descriptive variables
+df_features[,2] <- gsub("BodyBody", "Body", df_features[,2])
+#df_features[,2] <- tolower(df_features[,2])
+df_features[,2] <- gsub("[\\(\\)]", "", df_features[,2])
+df_features[,2] <- gsub("-", "_", df_features[,2])
+
 
 ### DATA SET TEST
 df_Xtest <- read.table(pathTestX, header = FALSE)
@@ -140,6 +150,7 @@ df_bodygyro_z <- rbind(df_testbodygyro_z, df_testbodygyro_z)
 
 ### QUESTION 2
 df_X_mean <- df_X[, grep(pattern = "mean", names(df_X))]
+df_X_mean <- df_X_mean[, -grep(pattern = "meanFreq", names(df_X_mean))]
 df_X_std <- df_X[, grep(pattern = "std", names(df_X))]
 
 
@@ -148,9 +159,12 @@ df_y <- merge(df_y, df_activity, by.x = "id", by.y = "id")
 df_y <- as.data.frame(df_y[,2]) 
 names(df_y) <- "activity"
 
-
 ### QUESTION 5
 df_total <- cbind(df_X_mean, df_X_std, df_y)
 df_total_activity <- group_by(df_total, activity)
 summary_mean_activity <- summarise_all(df_total_activity, funs(mean(.))) 
+View(df_X_mean)
 View(summary_mean_activity)
+write.table(summary_mean_activity, file = "dataset.txt",row.names = FALSE)
+
+
